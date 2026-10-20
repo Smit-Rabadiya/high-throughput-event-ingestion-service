@@ -18,7 +18,7 @@ Claude Code does not carry chat history between sessions. This file and `docs/ST
 6. **Always keep the relevant `.md` documents updated** in the same commit as the change they describe: `docs/STATUS.md` after every step; `README.md`, `docs/DESIGN.md`, `docs/PROJECT_PLAN.md`, `docs/BENCHMARK_RESULTS.md` whenever behaviour, decisions or results change.
 7. **Follow `docs/REPO_RULES.md`** for what may / may not be pushed (no secrets, no build output, no assessment PDF). Check staged files before every commit.
 
-8. **Never commit or push with failing tests.** Run dotnet test and check the result BEFORE git commit; chain the commit on success. (A broken commit was once pushed by mistake; fixed in 4d8d702.)
+8. **Never commit or push with failing tests.** Run dotnet test and check the result BEFORE git commit; chain the commit on success. (A broken commit was once pushed by mistake; fixed in 4d83810.)
 9. Production-readiness bar: config via env vars with fail-fast validation, bounded memory everywhere, fail-closed security in Production, versioned (SemVer + CHANGELOG + tag) and locked dependencies.
 
 

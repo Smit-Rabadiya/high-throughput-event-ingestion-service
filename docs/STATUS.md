@@ -71,10 +71,10 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - Added: idempotent retries (Idempotency-Key), API-key auth with scopes, per-client rate limits + global ingest concurrency cap, trusted-proxy config, durable write-ahead journal with crash-safe replay, /version, SemVer 1.0.0 (+git sha), CHANGELOG.md, packages.lock.json, Dockerfile, docker-compose, .env.example, ppsettings.Production.json (auth/rate-limit/journal on, JSON logs, fail-closed), docs/OPERATIONS.md rewritten.
 - Verified on real Kestrel in Production profile: fail-closed without keys; 401/403/200; idempotent replay; 429 after limit; hard-kill then restart restores data from journal; JSON logs; /version shows sha; no Server header.
 - **Not verified:** Docker image build (Docker not installed here). Do this first on a machine with Docker / in CI.
-- Process fix: a commit once went out with 20 failing tests (4d8d702 fixed it). Rule 8 in CLAUDE.md now requires green tests before every commit.
+- Process fix: a commit once went out with 20 failing tests (4d83810 fixed it). Rule 8 in CLAUDE.md now requires green tests before every commit.
 
 
-## Audit vs Practical.pdf + TLS (2026-10-21, committed in 8b69d5a and 2c50047)
+## Audit vs Practical.pdf + TLS (2026-10-21, committed in 8bf8e3f and 8e67adf)
 - Line-by-line audit of the PDF: every requirement and deliverable present. Found and fixed one real bug: timestamps without Z/offset were parsed as server-local time (new TimestampParsingTests). Added TLS enforcement (Tls:RequireHttps, TLS 1.2/1.3 only) + docs.
 - Committed and pushed. Consider releasing 1.0.1 (bump Version, move CHANGELOG [Unreleased], tag).
 - Contributor identity: the owner cannot verify the gmail on GitHub, so commits use Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com> (repo-local git config) and link to the GitHub account. Commits before 8b69d5a still show the gmail address and are not linked to the account (history is not rewritten).
@@ -83,3 +83,7 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 
 
 
+
+## History rewrite (2026-10-21, owner-approved, one-time)
+- All 21 commits were rewritten and force-pushed: removed the `Co-Authored-By: Claude` line, authored as `Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com>`, `v1.0.0` re-pointed (now b4e8803). Final tree unchanged, version unchanged (1.0.0). GitHub shows 21 commits all linked to Smit-Rabadiya.
+- Old commit IDs changed (e.g. release commit cbf820b is now b4e8803). A backup bundle of the old history was kept locally (scratchpad, not in the repo).

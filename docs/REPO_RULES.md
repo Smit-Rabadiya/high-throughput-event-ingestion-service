@@ -20,5 +20,5 @@ Remote: https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service
 1. `git status` and `git diff --cached --stat`: read the list of files being committed.
 2. Scan staged content for secrets (keys, tokens, `password`, connection strings, absolute user paths).
 3. Update relevant docs (`STATUS.md` always; README / DESIGN / PLAN when behaviour or decisions changed) in the same commit.
-4. Commit small with a clear message; push to `main` after each plan step. Never force-push; never rewrite pushed history.
+4. Commit small with a clear message; push to `main` after each plan step. Never force-push or rewrite pushed history unless the owner explicitly asks (one-time exception on 2026-10-21: remove AI co-author lines and fix authorship; see STATUS.md).
 
