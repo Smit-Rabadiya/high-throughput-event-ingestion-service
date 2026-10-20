@@ -24,6 +24,8 @@ public sealed class DeviceStore
 
     public int DeviceCount => _devices.Count;
 
+    public TimeSpan Window => _options.Window;
+
     public long NowUnixMs => _time.GetUtcNow().ToUnixTimeMilliseconds();
 
     /// <summary>Apply one reading. The device id is a span so known devices cost no string allocation.</summary>
@@ -56,6 +58,17 @@ public sealed class DeviceStore
         return false;
     }
 
+    public AggregateLookup Lookup(string deviceId, long nowUnixMs, out AggregateSnapshot snapshot)
+    {
+        if (!_devices.TryGetValue(deviceId, out var window))
+        {
+            snapshot = default;
+            return AggregateLookup.UnknownDevice;
+        }
+
+        return window.TryGetSnapshot(nowUnixMs, out snapshot) ? AggregateLookup.Found : AggregateLookup.NoReadingsInWindow;
+    }
+
     /// <summary>Removes devices with no readings left in the window; returns how many were dropped.</summary>
     public int SweepIdle(long nowUnixMs)
     {
@@ -68,3 +81,4 @@ public sealed class DeviceStore
         return removed;
     }
 }
+
