@@ -1,0 +1,16 @@
+﻿meta {
+  name: Unknown device 404
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/devices/does-not-exist/aggregates
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+

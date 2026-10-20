@@ -1,0 +1,28 @@
+﻿meta {
+  name: Ingest batch
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/readings
+  body: json
+  auth: none
+}
+
+body:json {
+  [
+    {"deviceId":"sensor-0042","timestamp":"{{nowIsoMinus1m}}","value":21.5},
+    {"deviceId":"sensor-0042","timestamp":"{{nowIso}}","value":22.5}
+  ]
+}
+
+script:pre-request {
+  bru.setVar('nowIso', new Date().toISOString());
+  bru.setVar('nowIsoMinus1m', new Date(Date.now() - 60000).toISOString());
+}
+
+assert {
+  res.status: eq 200
+}
+

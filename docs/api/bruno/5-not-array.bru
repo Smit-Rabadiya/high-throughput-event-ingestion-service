@@ -1,0 +1,20 @@
+﻿meta {
+  name: Not an array 400
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/readings
+  body: json
+  auth: none
+}
+
+body:json {
+  { "deviceId": "x" }
+}
+
+assert {
+  res.status: eq 400
+}
+

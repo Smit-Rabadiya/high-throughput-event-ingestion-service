@@ -1,0 +1,192 @@
+﻿{
+    "info":  {
+                 "name":  "Event Ingestion Service",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:5084"
+                     },
+                     {
+                         "key":  "nowIso",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "nowIsoMinus1m",
+                         "value":  ""
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Health",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/health"
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027, () =\u003e pm.response.to.have.status(200));"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "Ingest batch",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/readings"
+                                             },
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "[\n  {\"deviceId\":\"sensor-0042\",\"timestamp\":\"{{nowIsoMinus1m}}\",\"value\":21.5},\n  {\"deviceId\":\"sensor-0042\",\"timestamp\":\"{{nowIso}}\",\"value\":22.5}\n]"
+                                              }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "const now = new Date();",
+                                                                   "pm.collectionVariables.set(\u0027nowIso\u0027, now.toISOString());",
+                                                                   "pm.collectionVariables.set(\u0027nowIsoMinus1m\u0027, new Date(now.getTime() - 60000).toISOString());"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "prerequest"
+                                   },
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200 and accepted 2\u0027, () =\u003e { pm.response.to.have.status(200); pm.expect(pm.response.json().accepted).to.eql(2); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "Get aggregates",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/devices/sensor-0042/aggregates"
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200 with count\u0027, () =\u003e { pm.response.to.have.status(200); pm.expect(pm.response.json().count).to.be.above(0); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "Unknown device (404)",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/devices/does-not-exist/aggregates"
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027404\u0027, () =\u003e pm.response.to.have.status(404));"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "Not an array (400)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/readings"
+                                             },
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{ \"deviceId\": \"x\" }"
+                                              }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027400\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "Wrong content type (415)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "text/plain"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/readings"
+                                             },
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "[]"
+                                              }
+                                 },
+                     "event":  [
+                                   {
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\u0027415\u0027, () =\u003e pm.response.to.have.status(415));"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  },
+                                       "listen":  "test"
+                                   }
+                               ]
+                 }
+             ]
+}
