@@ -219,9 +219,17 @@ public static class ReadingStreamParser
 
             case Prop.Timestamp:
                 st.HasTimestamp = false;
-                if (token == JsonTokenType.String && reader.TryGetDateTimeOffset(out var when))
+                if (token == JsonTokenType.String && reader.TryGetDateTime(out var when))
                 {
-                    st.Timestamp = when.ToUnixTimeMilliseconds();
+                    // The brief says timestamps are UTC. "Z" and explicit offsets are exact; a value with no designator is
+                    // Unspecified and must be read as UTC, never in the server's local zone (TryGetDateTimeOffset would do that).
+                    var utc = when.Kind switch
+                    {
+                        DateTimeKind.Unspecified => DateTime.SpecifyKind(when, DateTimeKind.Utc),
+                        DateTimeKind.Local => when.ToUniversalTime(),
+                        _ => when,
+                    };
+                    st.Timestamp = new DateTimeOffset(utc).ToUnixTimeMilliseconds();
                     st.HasTimestamp = true;
                 }
                 else st.Bad = true;
@@ -261,5 +269,6 @@ public static class ReadingStreamParser
         }
     }
 }
+
 
 
