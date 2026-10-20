@@ -44,7 +44,7 @@ Every array element lands in exactly one bucket:
 |---|---|
 | 200 | batch fully processed (even if some readings were rejected) |
 | 400 | body is not a JSON array, or JSON is malformed/truncated |
-| 413 | more than 50,000 readings, or body over the 16 MiB server cap |
+| 413 | more than 50,000 readings, or body over the 32 MiB server cap |
 | 415 | `Content-Type` is not `application/json` |
 
 On 400/413 the readings parsed *before* the error remain applied; the problem body says how many:
@@ -99,4 +99,5 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 "[" + ($items -join ",") + "]" | Set-Content batch.json   # then: curl -X POST ... --data-binary "@batch.json"
 ```
 (`batch.json` is git-ignored.)
+
 

@@ -50,5 +50,6 @@ docs/                     DESIGN.md, BENCHMARK_RESULTS.md, PROJECT_PLAN.md, STAT
 | deviceId | Case-sensitive, 1-256 chars. Timestamps with offsets are converted to UTC. Property names are exact camelCase; duplicate keys: last wins. |
 | Unknown vs empty device | Both 404, with distinct `title` (`Unknown device` / `No readings in window`). |
 | Restart / outage | State is in memory only (persistence is out of scope). While the service is down it records nothing; on restart it starts empty. Devices that buffer and retry are accepted if timestamps are within the last 5 minutes, older ones are `stale`. Durable buffering is discussed in the design doc. |
-| Body limit | 16 MiB request cap plus the 50,000-reading cap. |
+| Body limit | 32 MiB request cap plus the 50,000-reading cap. |
 | Out of scope | Auth, rate limiting, persistence, containers/CI, UI, horizontal scaling (all as per the brief). |
+

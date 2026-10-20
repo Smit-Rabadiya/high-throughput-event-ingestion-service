@@ -54,3 +54,10 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - 4.1 allocation-conscious + justified (DESIGN s2, benchmark): done. 4.2 per-device locks, tests: done. 4.3 bounded memory (eviction + sweeper), single process: done.
 - 5 deliverables: README, DESIGN.md, BENCHMARK_RESULTS.md + benchmark project, tests: done. 6 out-of-scope items not built. 7 git history + assumptions (README table): done.
 
+
+## Post-completion audit (2026-10-20)
+- Release build clean (warnings as errors). 72 tests pass.
+- End-to-end over real Kestrel: 50,000 readings -> 200 accepted=50000 (~0.25-0.45 s, ~75 MB working set after 3 batches); 50,001 -> 413.
+- Body cap raised to 32 MiB; global.json pins SDK 10 (rollForward latestFeature); PROJECT_PLAN.md now lists deviations as built.
+- **Actual requirements: complete.** Next, if wanted: out-of-scope extras, in this order of value: (1) idempotent retry / dedupe key, (2) optional durable write-ahead log + replay on restart, (3) rate limiting / auth.
+

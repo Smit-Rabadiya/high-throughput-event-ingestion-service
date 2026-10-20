@@ -3,6 +3,15 @@
 Living reference. Every decision below is tied to a requirement in `Practical.pdf` (section numbers in brackets).
 **Bold requirements from the PDF are marked â˜… and are acceptance criteria.**
 
+## Final deviations from this plan (as built)
+The plan below is the original design; these are the places the implementation intentionally differs:
+- No IReadingSink / IClock abstractions: the parser takes DeviceStore directly and the engine uses TimeProvider (simpler, equally testable; avoids over-engineering).
+- ArrayPool is used only for the parser's device-id buffer, **not** for ring growth (no measured benefit; see DESIGN.md s2). The ring buffer is EntryList, a sorted struct array with a moving head.
+- Body cap is 32 MiB (50,000 readings with 256-char ids can exceed 16 MiB), not ~10 MB.
+- Extra endpoint GET /api/v1/devices/aggregates?deviceId= for ids containing /; response field is verage.
+- Writer-first locking detail: Add rejects stale/future before taking the lock; one clock read per batch.
+- Persistence/queues/Kafka remain out of scope (brief section 6); only discussed in DESIGN.md s5.
+
 ## 0. Decisions taken (from kickoff Q&A)
 
 | Topic | Decision | Why |
@@ -141,4 +150,5 @@ Device ids case-sensitive, â‰¤ 256 chars; timestamps normalised to UTC; futu
 ## 11. Scaling beyond one instance (goes into DESIGN.md)
 
 Partition by `hash(deviceId)` so each device's window lives on exactly one node (no cross-node merge); put a stateless gateway/Kafka-style partitioned log in front; per-partition ownership with replay for recovery; query routed by the same hash; or move aggregates into Redis/ClickHouse if durability is needed.
+
 
