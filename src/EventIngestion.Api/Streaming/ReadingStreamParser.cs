@@ -42,6 +42,7 @@ public static class ReadingStreamParser
         public int SkipDepth;
         public Prop Current;
 
+        public ReadingRecorder? Recorder;
         public char[] IdBuffer;
         public int IdLength;
         public long Timestamp;
@@ -56,9 +57,9 @@ public static class ReadingStreamParser
     }
 
     public static async ValueTask<IngestOutcome> ParseAsync(
-        PipeReader pipe, DeviceStore store, CancellationToken cancellationToken = default)
+        PipeReader pipe, DeviceStore store, ReadingRecorder? recorder = null, CancellationToken cancellationToken = default)
     {
-        var state = new State { Reader = new JsonReaderState(), IdBuffer = ArrayPool<char>.Shared.Rent(IdBufferChars) };
+        var state = new State { Reader = new JsonReaderState(), IdBuffer = ArrayPool<char>.Shared.Rent(IdBufferChars), Recorder = recorder };
         long now = store.NowUnixMs; // one clock read per batch: consistent window for every reading in it
         try
         {
@@ -250,11 +251,15 @@ public static class ReadingStreamParser
 
         switch (store.Add(st.IdBuffer.AsSpan(0, st.IdLength), st.Timestamp, st.Value, now))
         {
-            case AddResult.Accepted: st.Accepted++; break;
+            case AddResult.Accepted:
+                st.Accepted++;
+                st.Recorder?.Record(st.IdBuffer.AsSpan(0, st.IdLength), st.Timestamp, st.Value);
+                break;
             case AddResult.Stale: st.Stale++; break;
             case AddResult.DeviceLimit: st.DeviceLimit++; break;
             default: st.Future++; break;
         }
     }
 }
+
 

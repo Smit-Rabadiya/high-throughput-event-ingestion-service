@@ -1,4 +1,5 @@
-﻿using EventIngestion.Api.Hosting;
+﻿using EventIngestion.Api.Durability;
+using EventIngestion.Api.Hosting;
 using EventIngestion.Api.Idempotency;
 using EventIngestion.Api.Options;
 using EventIngestion.Api.Observability;
@@ -17,30 +18,44 @@ public sealed record DeviceAggregatesResponse(
 
 public static class ReadingEndpoints
 {
-    public static IEndpointRouteBuilder MapReadingEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapReadingEndpoints(this IEndpointRouteBuilder app, bool requireAuth = false, bool rateLimit = false)
     {
         var api = app.MapGroup("/api/v1");
-        api.MapPost("/readings", IngestAsync);
-        api.MapGet("/devices/{deviceId}/aggregates", GetAggregates);
+        var ingest = api.MapPost("/readings", IngestAsync);
+        var byPath = api.MapGet("/devices/{deviceId}/aggregates", GetAggregates);
         // Same query for ids that cannot travel in a URL path segment (e.g. containing "/").
-        api.MapGet("/devices/aggregates", (string? deviceId, DeviceStore store) =>
+        var byQuery = api.MapGet("/devices/aggregates", (string? deviceId, DeviceStore store) =>
             string.IsNullOrEmpty(deviceId)
                 ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing deviceId",
                     detail: "Provide the deviceId query parameter.")
                 : GetAggregates(deviceId, store));
+
+        if (requireAuth)
+        {
+            ingest.RequireAuthorization(Scopes.Ingest);
+            byPath.RequireAuthorization(Scopes.Query);
+            byQuery.RequireAuthorization(Scopes.Query);
+        }
+        if (rateLimit)
+        {
+            ingest.RequireRateLimiting("ingest");
+            byPath.RequireRateLimiting("query");
+            byQuery.RequireRateLimiting("query");
+        }
+
+        // Probes stay anonymous and unthrottled so orchestrators always get an answer.
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         app.MapGet("/health/ready", (ReadinessState state) =>
             state.IsReady ? Results.Ok(new { status = "ready" }) : Results.Json(new { status = "not ready" }, statusCode: StatusCodes.Status503ServiceUnavailable));
         return app;
     }
-
     public const string IdempotencyKeyHeader = "Idempotency-Key";
     public const string ReplayedHeader = "Idempotent-Replayed";
     private const int MaxIdempotencyKeyLength = 128;
 
     private static async Task<IResult> IngestAsync(
         HttpContext http, DeviceStore store, IdempotencyStore idempotency, IdempotencyOptions idempotencyOptions,
-        IngestMetrics metrics, ILogger<IngestLog> log)
+        IngestMetrics metrics, ILogger<IngestLog> log, FileReadingJournal? journal = null)
     {
         if (!http.Request.HasJsonContentType())
             return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Unsupported media type",
@@ -70,20 +85,39 @@ public static class ReadingEndpoints
             }
         }
 
+        var recorder = journal is null ? null : new JournalBatchBuffer();
         IngestOutcome outcome;
         try
         {
-            outcome = await ReadingStreamParser.ParseAsync(http.Request.BodyReader, store, http.RequestAborted);
+            outcome = await ReadingStreamParser.ParseAsync(http.Request.BodyReader, store, recorder, http.RequestAborted);
         }
         catch (BadHttpRequestException ex) // Kestrel enforcing MaxRequestBodySize surfaces here as 413
         {
+            recorder?.Release();
             if (key is not null) idempotency.Abandon(key);
             return Results.Problem(statusCode: ex.StatusCode, title: "Request rejected", detail: ex.Message);
         }
         catch
         {
+            recorder?.Release();
             if (key is not null) idempotency.Abandon(key); // client disconnected mid-batch: allow a retry
             throw;
+        }
+
+        if (journal is not null && recorder is not null)
+        {
+            try
+            {
+                await journal.AppendAsync(recorder, http.RequestAborted); // Fsync mode: acknowledged means on disk
+            }
+            catch (Exception ex)
+            {
+                if (key is not null) idempotency.Abandon(key);
+                if (ex is OperationCanceledException) throw; // client went away
+                http.Response.Headers.RetryAfter = "5";
+                return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Journal unavailable",
+                    detail: "The batch could not be made durable. It may already be reflected in current aggregates; retry with the same Idempotency-Key.");
+            }
         }
 
         if (key is not null) idempotency.Complete(key, outcome);
@@ -143,6 +177,9 @@ public static class ReadingEndpoints
         }
     }
 }
+
+
+
 
 
 

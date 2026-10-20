@@ -502,3 +502,6 @@ BenchmarkDotNet.Artifacts/
 *.bundle
 batch.json
 
+data/
+journal/
+

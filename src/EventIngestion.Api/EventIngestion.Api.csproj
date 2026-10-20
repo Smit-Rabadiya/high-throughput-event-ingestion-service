@@ -4,6 +4,10 @@
     <ProjectReference Include="..\EventIngestion.Core\EventIngestion.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.IO.Hashing" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
