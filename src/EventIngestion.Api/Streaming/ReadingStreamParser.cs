@@ -48,11 +48,11 @@ public static class ReadingStreamParser
         public double Value;
         public bool HasId, HasTimestamp, HasValue, Bad;
 
-        public int Accepted, Stale, Future, Invalid;
+        public int Accepted, Stale, Future, Invalid, DeviceLimit;
         public IngestError Error;
 
-        public readonly int Seen => Accepted + Stale + Future + Invalid;
-        public readonly IngestResult Result => new(Accepted, Stale, Future, Invalid);
+        public readonly int Seen => Accepted + Stale + Future + Invalid + DeviceLimit;
+        public readonly IngestResult Result => new(Accepted, Stale, Future, Invalid, DeviceLimit);
     }
 
     public static async ValueTask<IngestOutcome> ParseAsync(
@@ -252,7 +252,9 @@ public static class ReadingStreamParser
         {
             case AddResult.Accepted: st.Accepted++; break;
             case AddResult.Stale: st.Stale++; break;
+            case AddResult.DeviceLimit: st.DeviceLimit++; break;
             default: st.Future++; break;
         }
     }
 }
+

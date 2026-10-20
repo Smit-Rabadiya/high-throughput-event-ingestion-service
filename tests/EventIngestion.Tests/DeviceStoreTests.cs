@@ -66,3 +66,45 @@ public class DeviceStoreTests
         Assert.Equal(1, s.Count);
     }
 }
+
+public class DeviceLimitTests
+{
+    private sealed class Fixed(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    [Fact]
+    public void New_devices_beyond_the_limit_are_refused_but_known_devices_keep_working()
+    {
+        var store = new DeviceStore(new WindowOptions { MaxDevices = 3 }, new Fixed(DateTimeOffset.UnixEpoch.AddDays(20000)));
+        long now = store.NowUnixMs;
+        for (int i = 0; i < 3; i++) Assert.Equal(AddResult.Accepted, store.Add("d" + i, now, 1, now));
+
+        Assert.Equal(AddResult.DeviceLimit, store.Add("d3", now, 1, now));
+        Assert.Equal(AddResult.Accepted, store.Add("d1", now, 2, now)); // existing device unaffected
+        Assert.Equal(3, store.DeviceCount);
+    }
+
+    [Fact]
+    public void Stale_or_future_readings_for_unknown_devices_do_not_consume_capacity()
+    {
+        var store = new DeviceStore(new WindowOptions { MaxDevices = 1 }, new Fixed(DateTimeOffset.UnixEpoch.AddDays(20000)));
+        long now = store.NowUnixMs;
+        Assert.Equal(AddResult.Stale, store.Add("old", now - 10 * 60_000, 1, now));
+        Assert.Equal(AddResult.Future, store.Add("future", now + 10 * 60_000, 1, now));
+        Assert.Equal(0, store.DeviceCount);
+        Assert.Equal(AddResult.Accepted, store.Add("real", now, 1, now));
+    }
+
+    [Fact]
+    public void Freed_capacity_is_reusable_after_sweep()
+    {
+        var store = new DeviceStore(new WindowOptions { MaxDevices = 1 }, new Fixed(DateTimeOffset.UnixEpoch.AddDays(20000)));
+        long now = store.NowUnixMs;
+        store.Add("a", now, 1, now);
+        Assert.Equal(1, store.SweepIdle(now + 6 * 60_000));
+        Assert.Equal(0, store.DeviceCount);
+        Assert.Equal(AddResult.Accepted, store.Add("b", now, 1, now));
+    }
+}

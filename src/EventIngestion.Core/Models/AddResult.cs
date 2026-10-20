@@ -7,6 +7,9 @@ public enum AddResult
     Stale,
     /// <summary>Further in the future than the allowed clock skew.</summary>
     Future,
+    /// <summary>A new device was refused because the configured device limit is reached.</summary>
+    DeviceLimit,
     /// <summary>The window was removed by the sweeper; caller must re-resolve the device.</summary>
     Retired,
 }
+

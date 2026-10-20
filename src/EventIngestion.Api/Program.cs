@@ -1,20 +1,33 @@
 ﻿using EventIngestion.Api.Endpoints;
 using EventIngestion.Api.Hosting;
+using EventIngestion.Api.Observability;
+using EventIngestion.Api.Options;
 using EventIngestion.Core.Aggregation;
 using EventIngestion.Core.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 50,000 readings is ~5 MB typical, ~17 MB with 256-char ids; cap the body so a client cannot stream unbounded data.
-builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 32 * 1024 * 1024);
+// Configuration (appsettings.json, environment variables such as Window__MaxDevices, command line). Fail fast if invalid.
+var window = (builder.Configuration.GetSection("Window").Get<WindowOptions>() ?? new WindowOptions()).Validate();
+var service = (builder.Configuration.GetSection("Service").Get<ServiceOptions>() ?? new ServiceOptions()).Validate();
+
+builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = service.MaxRequestBodyBytes);
 
 builder.Services.AddProblemDetails();
-builder.Services.AddSingleton(new WindowOptions());
+builder.Services.AddSingleton(window);
+builder.Services.AddSingleton(service);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DeviceStore>();
-builder.Services.AddHostedService<EvictionSweeper>();
+builder.Services.AddSingleton<ReadinessState>();
+builder.Services.AddSingleton<IngestMetrics>();
+builder.Services.AddHostedService(sp => new EvictionSweeper(
+    sp.GetRequiredService<DeviceStore>(), sp.GetRequiredService<ILogger<EvictionSweeper>>(), service.SweepInterval));
 
 var app = builder.Build();
+
+var readiness = app.Services.GetRequiredService<ReadinessState>();
+app.Lifetime.ApplicationStarted.Register(readiness.MarkReady);
+app.Lifetime.ApplicationStopping.Register(readiness.MarkNotReady);
 
 app.UseExceptionHandler();
 app.MapReadingEndpoints();
@@ -22,4 +35,3 @@ app.MapReadingEndpoints();
 app.Run();
 
 public partial class Program;
-

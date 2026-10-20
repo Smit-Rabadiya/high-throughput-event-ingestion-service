@@ -1,10 +1,12 @@
-﻿using EventIngestion.Api.Streaming;
+﻿using EventIngestion.Api.Hosting;
+using EventIngestion.Api.Observability;
+using EventIngestion.Api.Streaming;
 using EventIngestion.Core.Aggregation;
 using EventIngestion.Core.Models;
 
 namespace EventIngestion.Api.Endpoints;
 
-public sealed record RejectedCounts(int Stale, int Future, int Invalid);
+public sealed record RejectedCounts(int Stale, int Future, int Invalid, int DeviceLimit);
 
 public sealed record IngestResponse(int Accepted, RejectedCounts Rejected, int Total);
 
@@ -25,10 +27,12 @@ public static class ReadingEndpoints
                     detail: "Provide the deviceId query parameter.")
                 : GetAggregates(deviceId, store));
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+        app.MapGet("/health/ready", (ReadinessState state) =>
+            state.IsReady ? Results.Ok(new { status = "ready" }) : Results.Json(new { status = "not ready" }, statusCode: StatusCodes.Status503ServiceUnavailable));
         return app;
     }
 
-    private static async Task<IResult> IngestAsync(HttpContext http, DeviceStore store)
+    private static async Task<IResult> IngestAsync(HttpContext http, DeviceStore store, IngestMetrics metrics, ILogger<IngestLog> log)
     {
         if (!http.Request.HasJsonContentType())
             return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Unsupported media type",
@@ -45,9 +49,12 @@ public static class ReadingEndpoints
         }
 
         var r = outcome.Result;
+        metrics.Record(r, outcome.Error != IngestError.None);
+        if (outcome.Error != IngestError.None) IngestLog.Stopped(log, outcome.Error, r.Accepted, r.Total);
+        else IngestLog.Processed(log, r.Accepted, r.Stale, r.Future, r.Invalid, r.DeviceLimit);
         return outcome.Error switch
         {
-            IngestError.None => Results.Ok(new IngestResponse(r.Accepted, new RejectedCounts(r.Stale, r.Future, r.Invalid), r.Total)),
+            IngestError.None => Results.Ok(new IngestResponse(r.Accepted, new RejectedCounts(r.Stale, r.Future, r.Invalid, r.DeviceLimit), r.Total)),
             IngestError.NotAnArray => Failure(StatusCodes.Status400BadRequest, "Body must be a JSON array of readings.", r),
             IngestError.TooManyReadings => Failure(StatusCodes.Status413PayloadTooLarge,
                 $"A batch may contain at most {ReadingStreamParser.MaxBatchSize} readings.", r),
@@ -62,7 +69,7 @@ public static class ReadingEndpoints
             extensions: new Dictionary<string, object?>
             {
                 ["accepted"] = r.Accepted,
-                ["rejected"] = new RejectedCounts(r.Stale, r.Future, r.Invalid),
+                ["rejected"] = new RejectedCounts(r.Stale, r.Future, r.Invalid, r.DeviceLimit),
             });
 
     private static IResult GetAggregates(string deviceId, DeviceStore store)
@@ -82,5 +89,9 @@ public static class ReadingEndpoints
         }
     }
 }
+
+
+
+
 
 

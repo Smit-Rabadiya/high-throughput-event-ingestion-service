@@ -101,3 +101,8 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 (`batch.json` is git-ignored.)
 
 
+
+
+### Readiness
+GET /health/ready: 200 once the service is started; 503 during start-up and shutdown.
+

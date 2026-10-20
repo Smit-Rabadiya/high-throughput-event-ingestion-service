@@ -14,6 +14,7 @@ public sealed class DeviceStore
     private readonly ConcurrentDictionary<string, DeviceWindow>.AlternateLookup<ReadOnlySpan<char>> _lookup;
     private readonly WindowOptions _options;
     private readonly TimeProvider _time;
+    private int _deviceCount; // own counter: ConcurrentDictionary.Count takes every bucket lock
 
     public DeviceStore(WindowOptions options, TimeProvider time)
     {
@@ -22,7 +23,7 @@ public sealed class DeviceStore
         _lookup = _devices.GetAlternateLookup<ReadOnlySpan<char>>();
     }
 
-    public int DeviceCount => _devices.Count;
+    public int DeviceCount => Volatile.Read(ref _deviceCount);
 
     public TimeSpan Window => _options.Window;
 
@@ -35,15 +36,23 @@ public sealed class DeviceStore
         {
             if (!_lookup.TryGetValue(deviceId, out var window))
             {
-                // Only the first sighting of a device allocates its id string.
-                window = _devices.GetOrAdd(deviceId.ToString(), static (_, o) => new DeviceWindow(o), _options);
+                // Never create a window for a reading that would be rejected anyway (stale/future ids must not consume capacity).
+                if (timestampUnixMs <= nowUnixMs - _options.WindowMs) return AddResult.Stale;
+                if (timestampUnixMs > nowUnixMs + _options.FutureSkewMs) return AddResult.Future;
+                if (DeviceCount >= _options.MaxDevices) return AddResult.DeviceLimit;
+
+                // Only the first sighting of a device allocates its id string and window.
+                var created = new DeviceWindow(_options);
+                window = _devices.GetOrAdd(deviceId.ToString(), created);
+                if (ReferenceEquals(window, created)) Interlocked.Increment(ref _deviceCount);
             }
 
             var result = window.Add(timestampUnixMs, value, nowUnixMs);
             if (result != AddResult.Retired) return result;
 
             // Sweeper retired this window between lookup and lock: drop the stale entry and retry.
-            _devices.TryRemove(new KeyValuePair<string, DeviceWindow>(deviceId.ToString(), window));
+            if (_devices.TryRemove(new KeyValuePair<string, DeviceWindow>(deviceId.ToString(), window)))
+                Interlocked.Decrement(ref _deviceCount);
         }
     }
 
@@ -76,9 +85,14 @@ public sealed class DeviceStore
         foreach (var pair in _devices)
         {
             if (pair.Value.TryRetire(nowUnixMs) && _devices.TryRemove(pair))
+            {
+                Interlocked.Decrement(ref _deviceCount);
                 removed++;
+            }
         }
         return removed;
     }
 }
+
+
 

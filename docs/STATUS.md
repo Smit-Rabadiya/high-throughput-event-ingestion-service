@@ -61,3 +61,8 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - Body cap raised to 32 MiB; global.json pins SDK 10 (rollForward latestFeature); PROJECT_PLAN.md now lists deviations as built.
 - **Actual requirements: complete.** Next, if wanted: out-of-scope extras, in this order of value: (1) idempotent retry / dedupe key, (2) optional durable write-ahead log + replay on restart, (3) rate limiting / auth.
 
+
+## Production hardening (2026-10-21)
+- Added: device cap (Window:MaxDevices, ejected.deviceLimit), typed config + fail-fast validation, /health/ready with shutdown draining, System.Diagnostics.Metrics, source-generated logging, central package versions (Directory.Packages.props), docs/OPERATIONS.md. 78 tests pass.
+- Next (approved out-of-scope, in order): idempotent retries -> optional durable journal + replay -> rate limiting + API-key auth.
+
