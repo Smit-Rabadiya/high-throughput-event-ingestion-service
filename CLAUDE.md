@@ -24,3 +24,7 @@ Claude Code does not carry chat history between sessions. This file and `docs/ST
 
 10. **Git identity:** commit as Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com> (repo-local config; the owner cannot verify any other email on GitHub). Never use or publish the owner's personal email in commits.
 
+
+11. **No AI co-author line.** Do not add `Co-Authored-By: Claude ...` (or any AI attribution) to commit messages or PR descriptions; commits are authored by the owner only (decided 2026-10-21).
+12. **Do not bump the version** (currently 1.0.0) or tag a release until the owner asks; record changes under [Unreleased] in CHANGELOG.md.
+
