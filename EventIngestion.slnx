@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/EventIngestion.Benchmarks/EventIngestion.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/EventIngestion.Api/EventIngestion.Api.csproj" />
+    <Project Path="src/EventIngestion.Core/EventIngestion.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EventIngestion.Tests/EventIngestion.Tests.csproj" />
+  </Folder>
+</Solution>
