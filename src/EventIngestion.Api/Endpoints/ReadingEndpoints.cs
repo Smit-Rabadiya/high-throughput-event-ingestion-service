@@ -6,6 +6,7 @@ using EventIngestion.Api.Observability;
 using EventIngestion.Api.Streaming;
 using EventIngestion.Core.Aggregation;
 using EventIngestion.Core.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EventIngestion.Api.Endpoints;
 
@@ -55,7 +56,7 @@ public static class ReadingEndpoints
 
     private static async Task<IResult> IngestAsync(
         HttpContext http, DeviceStore store, IdempotencyStore idempotency, IdempotencyOptions idempotencyOptions,
-        IngestMetrics metrics, ILogger<IngestLog> log, FileReadingJournal? journal = null)
+        IngestMetrics metrics, ILogger<IngestLog> log, [FromServices] FileReadingJournal? journal = null)
     {
         if (!http.Request.HasJsonContentType())
             return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Unsupported media type",
@@ -177,6 +178,7 @@ public static class ReadingEndpoints
         }
     }
 }
+
 
 
 
