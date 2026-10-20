@@ -19,7 +19,7 @@ Body: JSON array of up to **50,000** readings.
 | Field | Type | Rules |
 |---|---|---|
 | `deviceId` | string | required, 1-256 chars, case-sensitive |
-| `timestamp` | string | required, ISO-8601 (`2026-10-08T09:00:01Z`; offsets are converted to UTC) |
+| `timestamp` | string | required, ISO-8601 (`2026-10-08T09:00:01Z`). Offsets are converted to UTC; a value with **no** `Z`/offset is treated as UTC (never server-local time). Upper-case `T` and `Z` only; space separators, lower-case `z` and non-ISO formats are `invalid` |
 | `value` | number | required, finite double |
 
 ```json
@@ -49,6 +49,7 @@ Every array element lands in exactly one bucket:
 | 400 | body is not a JSON array, or JSON is malformed/truncated |
 | 413 | more than 50,000 readings, or body over the 32 MiB server cap |
 | 415 | `Content-Type` is not `application/json` |
+| 403 | `Tls:RequireHttps` is on and the call did not arrive over HTTPS |
 
 On 400/413 the readings parsed *before* the error remain applied; the problem body says how many:
 ```json
@@ -115,6 +116,7 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 
 ### Readiness
 GET /health/ready: 200 once the service is started; 503 during start-up and shutdown.
+
 
 
 

@@ -101,3 +101,14 @@ public sealed class ProxyOptions
     public static System.Net.IPNetwork ParseNetwork(string cidr) =>
         System.Net.IPNetwork.TryParse(cidr, out var net) ? net : throw new InvalidOperationException($"Proxy:KnownNetworks contains an invalid CIDR '{cidr}'.");
 }
+
+/// <summary>Transport security (configuration section "Tls").</summary>
+public sealed class TlsOptions
+{
+    /// <summary>
+    /// Reject API calls that did not arrive over HTTPS (so API keys never travel in clear text). "Over HTTPS" is judged after
+    /// forwarded headers, so behind a TLS-terminating proxy enable <see cref="ProxyOptions"/> and the proxy's X-Forwarded-Proto is used.
+    /// Probes (/health*, /version) are exempt so orchestrators can reach them over plain HTTP inside the cluster.
+    /// </summary>
+    public bool RequireHttps { get; init; }
+}

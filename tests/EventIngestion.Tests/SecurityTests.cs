@@ -126,3 +126,32 @@ public sealed class SecurityTests
         new ProxyOptions { Enabled = true, KnownNetworks = ["10.0.0.0/8"], KnownProxies = ["127.0.0.1"] }.Validate();
     }
 }
+
+public sealed class TlsTests
+{
+    [Fact]
+    public async Task Require_https_blocks_plain_http_api_calls_but_not_probes_and_allows_https()
+    {
+        using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>()
+            .WithWebHostBuilder(b => b.UseSetting("Tls:RequireHttps", "true"));
+
+        using var plain = factory.CreateClient(); // http://localhost
+        var blocked = await plain.GetAsync("/api/v1/devices/x/aggregates");
+        Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/v1/readings", new StringContent("[]", Encoding.UTF8, "application/json"))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await plain.GetAsync("/health")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await plain.GetAsync("/health/ready")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await plain.GetAsync("/version")).StatusCode);
+
+        using var secure = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        Assert.Equal(HttpStatusCode.NotFound, (await secure.GetAsync("/api/v1/devices/x/aggregates")).StatusCode); // allowed through (no such device)
+    }
+
+    [Fact]
+    public async Task Https_is_not_required_by_default()
+    {
+        using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/devices/x/aggregates")).StatusCode);
+    }
+}

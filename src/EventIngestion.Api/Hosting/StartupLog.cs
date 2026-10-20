@@ -9,7 +9,11 @@ public static partial class StartupLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Authentication is DISABLED (Auth:Enabled=false). Do not expose this instance beyond a trusted network.")]
     public static partial void AuthDisabled(ILogger logger);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Tls:RequireHttps is false: API keys are only protected if TLS is terminated upstream (ingress/proxy) or on a Kestrel HTTPS endpoint.")]
+    public static partial void HttpsNotEnforced(ILogger logger);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rate limiting is DISABLED (RateLimiting:Enabled=false).")]
     public static partial void RateLimitDisabled(ILogger logger);
 }
+
 

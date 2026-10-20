@@ -73,3 +73,9 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - **Not verified:** Docker image build (Docker not installed here). Do this first on a machine with Docker / in CI.
 - Process fix: a commit once went out with 20 failing tests (4d8d702 fixed it). Rule 8 in CLAUDE.md now requires green tests before every commit.
 
+
+## Audit vs Practical.pdf + TLS (2026-10-21, UNCOMMITTED at owner's request)
+- Line-by-line audit of the PDF: every requirement and deliverable present. Found and fixed one real bug: timestamps without Z/offset were parsed as server-local time (new TimestampParsingTests). Added TLS enforcement (Tls:RequireHttps, TLS 1.2/1.3 only) + docs.
+- These changes are in the working tree, not committed/pushed. Next session: run dotnet test, then commit (suggest: fix UTC parsing; add TLS) and consider releasing 1.0.1.
+- Open item: commit author email on the public repo is the owner's gmail address; consider GitHub's no-reply address for future commits.
+

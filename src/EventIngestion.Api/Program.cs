@@ -26,10 +26,13 @@ var auth = Bind<AuthOptions>("Auth").Validate();
 var rate = Bind<RateLimitOptions>("RateLimiting").Validate();
 var proxy = Bind<ProxyOptions>("Proxy").Validate();
 var journalOptions = Bind<JournalOptions>("Journal").Validate();
+var tls = Bind<TlsOptions>("Tls");
 
 builder.WebHost.ConfigureKestrel(k =>
 {
     k.AddServerHeader = false; // do not advertise the server stack
+    // Any HTTPS endpoint (Kestrel__Endpoints__Https__*) accepts TLS 1.2 and 1.3 only; no effect on plain-HTTP endpoints.
+    k.ConfigureHttpsDefaults(h => h.SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13);
     k.Limits.MaxRequestBodySize = service.MaxRequestBodyBytes;
 });
 
@@ -126,8 +129,23 @@ var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
 StartupLog.Starting(startupLog, BuildInfo.Current.InformationalVersion, app.Environment.EnvironmentName);
 if (!auth.Enabled) StartupLog.AuthDisabled(startupLog);
 if (!rate.Enabled) StartupLog.RateLimitDisabled(startupLog);
+if (!tls.RequireHttps && app.Environment.IsProduction()) StartupLog.HttpsNotEnforced(startupLog);
 
 if (proxy.Enabled) app.UseForwardedHeaders();
+if (tls.RequireHttps)
+{
+    app.Use(async (ctx, next) =>
+    {
+        bool probe = ctx.Request.Path.StartsWithSegments("/health") || ctx.Request.Path.StartsWithSegments("/version");
+        if (ctx.Request.IsHttps || probe)
+        {
+            await next();
+            return;
+        }
+        await Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "HTTPS required",
+            detail: "Send API calls over HTTPS.").ExecuteAsync(ctx);
+    });
+}
 app.UseExceptionHandler();
 if (auth.Enabled) app.UseAuthentication();
 if (rate.Enabled) app.UseRateLimiter(); // after authentication so limits can key on the caller
@@ -137,6 +155,7 @@ app.MapReadingEndpoints(auth.Enabled, rate.Enabled);
 app.Run();
 
 public partial class Program;
+
 
 
 

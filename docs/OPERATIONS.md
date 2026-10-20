@@ -19,6 +19,7 @@ Sources, lowest to highest priority: `appsettings.json` -> `appsettings.{Environ
 | `RateLimiting__IngestPermitsPerWindow` / `QueryPermitsPerWindow` / `Window` | `600` / `6000` / `00:01:00` | Per client (API-key name, else IP) |
 | `RateLimiting__MaxConcurrentIngests` / `ConcurrentIngestQueue` | `64` / `16` | Global cap on batches processed at once; excess queues then gets 429 |
 | `Proxy__Enabled`, `Proxy__KnownProxies__N`, `Proxy__KnownNetworks__N` | off | Trust `X-Forwarded-For/Proto` only from these proxies (otherwise clients can spoof IPs and dodge rate limits) |
+| `Tls__RequireHttps` | `false` | Refuse API calls not received over HTTPS (after forwarded headers); probes exempt. Turn on in any deployment where keys are used |
 | `Journal__Enabled` | `false` (`true` in Production) | Write-ahead journal + replay on restart |
 | `Journal__Directory` | `data/journal` (`/var/lib/ingestion/journal` in Production) | Put on a persistent volume |
 | `Journal__Durability` | `Fsync` | `Fsync`: ack means on disk (group-committed). `Buffered`: ack immediately, fsync every `FsyncInterval` (default 1 s), power loss can lose that interval |
@@ -37,7 +38,13 @@ curl localhost:8080/health/ready
 ```
 > The Dockerfile/compose were written to the same Production profile that was exercised locally on Kestrel (auth, scopes, idempotent replay, rate limiting, journal recovery after a hard kill), but **no image has been built in this repository's environment** (Docker was not available). Build and smoke-test it in CI before relying on it. Pin base images by digest there.
 
-TLS: terminate at the ingress / reverse proxy (the container speaks HTTP on 8080). Then set `Proxy__Enabled` and `KnownNetworks` to the proxy's network so rate limiting sees real client IPs.
+## TLS
+Three supported setups (pick one):
+1. **Terminate at an ingress / reverse proxy (recommended).** The container speaks HTTP on 8080. Set `Proxy__Enabled=true` + `Proxy__KnownNetworks__0=<proxy CIDR>` so real client IPs and `X-Forwarded-Proto` are trusted, and `Tls__RequireHttps=true` so any API call that did not arrive over HTTPS is refused (403) and API keys can never be sent in clear text. Probes (`/health*`, `/version`) stay reachable over HTTP.
+2. **Kestrel terminates TLS itself**, with no code change, via configuration: `Kestrel__Endpoints__Https__Url=https://+:8443`, `Kestrel__Endpoints__Https__Certificate__Path=/certs/tls.pfx`, `Kestrel__Endpoints__Https__Certificate__Password` (from a secret store, never committed; mount the PFX read-only). Add `Tls__RequireHttps=true`. The service restricts HTTPS endpoints to **TLS 1.2 and 1.3** only.
+3. **Local development:** `dotnet dev-certs https --trust` then `dotnet run --project src/EventIngestion.Api --launch-profile https` (https://localhost:7260).
+Not provided: certificate issuance/rotation (use your CA / cert-manager / ACME at the proxy), mutual TLS for devices, HSTS/redirects (API clients are devices, not browsers; a redirect would turn POSTs into GETs). In Production, start-up logs a warning while `Tls:RequireHttps` is false.
+Verified locally (self-signed cert, real Kestrel, Windows 10): plain-HTTP API call -> 403, probe over HTTP -> 200, HTTPS API call allowed, TLS 1.2 works, a client capped at TLS 1.1 is refused. TLS 1.3 could not be exercised because this OS's TLS stack/curl combination does not negotiate it; verify on your target platform.
 
 ## Probes, metrics, logs
 - `GET /health` liveness; `GET /health/ready` readiness (503 until started *and journal recovery finished*, and 503 again as soon as shutdown begins so traffic drains); `GET /version`.
@@ -62,5 +69,7 @@ With the journal enabled, every accepted reading is written to `journal-*.log` s
 | Durability + crash-safe replay | In the service (optional) |
 | Versioning, locked dependencies | In the repo |
 | Container + compose | Provided, **untested here** (no Docker available) |
-| TLS, WAF, secrets manager, CI/CD pipeline, dashboards/alerts | Deployment platform; not in this repo |
+| TLS | Config + enforcement in the service (see TLS section); certificates/rotation come from your platform |
+| WAF, secrets manager, CI/CD pipeline, dashboards/alerts | Deployment platform; not in this repo |
 | Capacity | Single instance, in memory: RAM ~ devices x readings in window x 16-48 B plus headroom. Benchmarks are from a 2015 laptop CPU: re-run on target hardware, and load/soak test before launch. GC mode (Server/Concurrent) not tuned: measure first |
+
