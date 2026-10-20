@@ -21,3 +21,6 @@ Claude Code does not carry chat history between sessions. This file and `docs/ST
 8. **Never commit or push with failing tests.** Run dotnet test and check the result BEFORE git commit; chain the commit on success. (A broken commit was once pushed by mistake; fixed in 4d8d702.)
 9. Production-readiness bar: config via env vars with fail-fast validation, bounded memory everywhere, fail-closed security in Production, versioned (SemVer + CHANGELOG + tag) and locked dependencies.
 
+
+10. **Git identity:** commit as Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com> (repo-local config; the owner cannot verify any other email on GitHub). Never use or publish the owner's personal email in commits.
+

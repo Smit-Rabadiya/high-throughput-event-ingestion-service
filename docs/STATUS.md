@@ -74,8 +74,10 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - Process fix: a commit once went out with 20 failing tests (4d8d702 fixed it). Rule 8 in CLAUDE.md now requires green tests before every commit.
 
 
-## Audit vs Practical.pdf + TLS (2026-10-21, UNCOMMITTED at owner's request)
+## Audit vs Practical.pdf + TLS (2026-10-21, committed in 8b69d5a and 2c50047)
 - Line-by-line audit of the PDF: every requirement and deliverable present. Found and fixed one real bug: timestamps without Z/offset were parsed as server-local time (new TimestampParsingTests). Added TLS enforcement (Tls:RequireHttps, TLS 1.2/1.3 only) + docs.
-- These changes are in the working tree, not committed/pushed. Next session: run dotnet test, then commit (suggest: fix UTC parsing; add TLS) and consider releasing 1.0.1.
-- Open item: commit author email on the public repo is the owner's gmail address; consider GitHub's no-reply address for future commits.
+- Committed and pushed. Consider releasing 1.0.1 (bump Version, move CHANGELOG [Unreleased], tag).
+- Contributor identity: the owner cannot verify the gmail on GitHub, so commits use Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com> (repo-local git config) and link to the GitHub account. Commits before 8b69d5a still show the gmail address and are not linked to the account (history is not rewritten).
+- Next: Swagger/OpenAPI (dev-only UI, committed openapi.json, X-Api-Key scheme).
+
 
