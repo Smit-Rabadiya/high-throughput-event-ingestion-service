@@ -1,4 +1,6 @@
 ﻿using EventIngestion.Api.Hosting;
+using EventIngestion.Api.Idempotency;
+using EventIngestion.Api.Options;
 using EventIngestion.Api.Observability;
 using EventIngestion.Api.Streaming;
 using EventIngestion.Core.Aggregation;
@@ -32,11 +34,41 @@ public static class ReadingEndpoints
         return app;
     }
 
-    private static async Task<IResult> IngestAsync(HttpContext http, DeviceStore store, IngestMetrics metrics, ILogger<IngestLog> log)
+    public const string IdempotencyKeyHeader = "Idempotency-Key";
+    public const string ReplayedHeader = "Idempotent-Replayed";
+    private const int MaxIdempotencyKeyLength = 128;
+
+    private static async Task<IResult> IngestAsync(
+        HttpContext http, DeviceStore store, IdempotencyStore idempotency, IdempotencyOptions idempotencyOptions,
+        IngestMetrics metrics, ILogger<IngestLog> log)
     {
         if (!http.Request.HasJsonContentType())
             return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Unsupported media type",
                 detail: "Content-Type must be application/json.");
+
+        string? key = null;
+        if (idempotencyOptions.Enabled && http.Request.Headers.TryGetValue(IdempotencyKeyHeader, out var header))
+        {
+            key = header.Count == 1 ? header[0] : null;
+            if (!IsValidKey(key))
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid Idempotency-Key",
+                    detail: $"Send exactly one {IdempotencyKeyHeader} of 1-{MaxIdempotencyKeyLength} printable ASCII characters.");
+
+            switch (idempotency.Begin(key!, out var previous))
+            {
+                case BeginStatus.Replay:
+                    http.Response.Headers[ReplayedHeader] = "true";
+                    return Render(previous);
+                case BeginStatus.InProgress:
+                    http.Response.Headers.RetryAfter = "1";
+                    return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Request in progress",
+                        detail: "A request with this Idempotency-Key is still being processed. Retry shortly.");
+                case BeginStatus.Full:
+                    http.Response.Headers.RetryAfter = "30";
+                    return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Idempotency store full",
+                        detail: "Too many outstanding idempotency keys; retry later.");
+            }
+        }
 
         IngestOutcome outcome;
         try
@@ -45,13 +77,35 @@ public static class ReadingEndpoints
         }
         catch (BadHttpRequestException ex) // Kestrel enforcing MaxRequestBodySize surfaces here as 413
         {
+            if (key is not null) idempotency.Abandon(key);
             return Results.Problem(statusCode: ex.StatusCode, title: "Request rejected", detail: ex.Message);
         }
+        catch
+        {
+            if (key is not null) idempotency.Abandon(key); // client disconnected mid-batch: allow a retry
+            throw;
+        }
+
+        if (key is not null) idempotency.Complete(key, outcome);
 
         var r = outcome.Result;
         metrics.Record(r, outcome.Error != IngestError.None);
         if (outcome.Error != IngestError.None) IngestLog.Stopped(log, outcome.Error, r.Accepted, r.Total);
         else IngestLog.Processed(log, r.Accepted, r.Stale, r.Future, r.Invalid, r.DeviceLimit);
+        return Render(outcome);
+    }
+
+    private static bool IsValidKey(string? key)
+    {
+        if (string.IsNullOrEmpty(key) || key.Length > MaxIdempotencyKeyLength) return false;
+        foreach (char c in key)
+            if (c is < '!' or > '~') return false;
+        return true;
+    }
+
+    private static IResult Render(IngestOutcome outcome)
+    {
+        var r = outcome.Result;
         return outcome.Error switch
         {
             IngestError.None => Results.Ok(new IngestResponse(r.Accepted, new RejectedCounts(r.Stale, r.Future, r.Invalid, r.DeviceLimit), r.Total)),
@@ -89,6 +143,7 @@ public static class ReadingEndpoints
         }
     }
 }
+
 
 
 

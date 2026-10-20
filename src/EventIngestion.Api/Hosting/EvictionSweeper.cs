@@ -1,12 +1,14 @@
-﻿using EventIngestion.Core.Aggregation;
+﻿using EventIngestion.Api.Idempotency;
+using EventIngestion.Core.Aggregation;
 
 namespace EventIngestion.Api.Hosting;
 
 /// <summary>
 /// Periodically drops devices whose windows are empty so memory stays bounded by active devices x
-/// readings-in-window even when a device goes silent and is never queried again.
+/// readings-in-window even when a device goes silent and is never queried again. Also expires idempotency keys.
 /// </summary>
-public sealed partial class EvictionSweeper(DeviceStore store, ILogger<EvictionSweeper> logger, TimeSpan? interval = null)
+public sealed partial class EvictionSweeper(
+    DeviceStore store, ILogger<EvictionSweeper> logger, TimeSpan? interval = null, IdempotencyStore? idempotency = null)
     : BackgroundService
 {
     public static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(30);
@@ -21,7 +23,8 @@ public sealed partial class EvictionSweeper(DeviceStore store, ILogger<EvictionS
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
                 int removed = store.SweepIdle(store.NowUnixMs);
-                if (removed > 0) LogSwept(removed, store.DeviceCount);
+                int keys = idempotency?.Sweep() ?? 0;
+                if (removed > 0 || keys > 0) LogSwept(removed, store.DeviceCount, keys);
             }
         }
         catch (OperationCanceledException)
@@ -30,6 +33,6 @@ public sealed partial class EvictionSweeper(DeviceStore store, ILogger<EvictionS
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Swept {Removed} idle devices, {Remaining} remain")]
-    private partial void LogSwept(int removed, int remaining);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Swept {Removed} idle devices ({Remaining} remain), {Keys} expired idempotency keys")]
+    private partial void LogSwept(int removed, int remaining, int keys);
 }

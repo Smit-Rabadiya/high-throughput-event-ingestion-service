@@ -54,6 +54,13 @@ On 400/413 the readings parsed *before* the error remain applied; the problem bo
   "accepted": 1, "rejected": { "stale": 0, "future": 0, "invalid": 0 } }
 ```
 
+### Safe retries: `Idempotency-Key` header (optional)
+Send `Idempotency-Key: <1-128 printable ASCII chars>` on `POST /api/v1/readings` and retry with the **same key** after a timeout, lost response or outage. The server remembers the outcome for 15 minutes (`Idempotency:Ttl`): a retry is answered with the original response plus `Idempotent-Replayed: true` and **nothing is applied twice**.
+- The key must identify one exact batch (the body is streamed, not hashed; reusing a key with a different body returns the first batch's result).
+- Same key while the first request is still running: **409** with `Retry-After: 1`. Too many outstanding keys: **503** with `Retry-After`. Bad key: **400**.
+- If the connection drops mid-batch the key is forgotten so the retry is processed (readings already applied before the drop could be applied again; unavoidable without a per-reading id).
+- Without the header every POST is applied (default behaviour).
+
 ### `GET /api/v1/devices/{deviceId}/aggregates` - rolling aggregates
 Aggregates over readings with timestamp in `(now - 5 min, now]`, evaluated at request time.
 
@@ -105,4 +112,5 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 
 ### Readiness
 GET /health/ready: 200 once the service is started; 503 during start-up and shutdown.
+
 
