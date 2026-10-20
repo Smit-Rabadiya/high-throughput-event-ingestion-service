@@ -9,6 +9,9 @@ Remote: https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service
 - The assessment brief `docs/reference/Practical.pdf` (kept locally only; summarised in `PROJECT_PLAN.md`).
 - Claude Code local state (`.claude/`), backups (`*.bundle`), scratch files.
 
+## Safe to push (look like config but are not secrets)
+- .env.example (placeholders only), Dockerfile, docker-compose.yml, ppsettings*.json **without** keys/passwords, packages.lock.json. Real .env, any Auth__Keys__* values or plain API keys, and journal data (data/, journal/) are never committed.
+
 ## Always push
 - Source (`src/`, `tests/`, `benchmarks/`), solution, `Directory.Build.props`, `.gitignore`, `global.json`.
 - `README.md`, `docs/DESIGN.md`, `docs/BENCHMARK_RESULTS.md`, `docs/PROJECT_PLAN.md`, `docs/STATUS.md`, `docs/REPO_RULES.md`, `CLAUDE.md`.
@@ -18,3 +21,4 @@ Remote: https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service
 2. Scan staged content for secrets (keys, tokens, `password`, connection strings, absolute user paths).
 3. Update relevant docs (`STATUS.md` always; README / DESIGN / PLAN when behaviour or decisions changed) in the same commit.
 4. Commit small with a clear message; push to `main` after each plan step. Never force-push; never rewrite pushed history.
+

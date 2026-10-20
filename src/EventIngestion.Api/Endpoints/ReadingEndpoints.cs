@@ -45,6 +45,7 @@ public static class ReadingEndpoints
         }
 
         // Probes stay anonymous and unthrottled so orchestrators always get an answer.
+        app.MapGet("/version", () => Results.Ok(BuildInfo.Current));
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         app.MapGet("/health/ready", (ReadinessState state) =>
             state.IsReady ? Results.Ok(new { status = "ready" }) : Results.Json(new { status = "not ready" }, statusCode: StatusCodes.Status503ServiceUnavailable));
@@ -178,6 +179,7 @@ public static class ReadingEndpoints
         }
     }
 }
+
 
 
 

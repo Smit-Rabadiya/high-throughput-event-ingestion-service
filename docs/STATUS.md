@@ -3,7 +3,7 @@
 Last updated: 2026-10-20
 
 ## Where we are
-All 10 plan steps done. Remaining: optional polish / review feedback.
+v1.0.0: all 10 plan steps + production hardening + approved out-of-scope extras are done. 108 tests pass. Remaining: build/smoke-test the Docker image in an environment with Docker; load/soak test on target hardware.
 Plan: `PROJECT_PLAN.md`. Rules: `../CLAUDE.md`, `REPO_RULES.md`. Requirements PDF is kept locally only (`docs/reference/Practical.pdf`, git-ignored).
 
 ## Remote
@@ -65,4 +65,11 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 ## Production hardening (2026-10-21)
 - Added: device cap (Window:MaxDevices, ejected.deviceLimit), typed config + fail-fast validation, /health/ready with shutdown draining, System.Diagnostics.Metrics, source-generated logging, central package versions (Directory.Packages.props), docs/OPERATIONS.md. 78 tests pass.
 - Next (approved out-of-scope, in order): idempotent retries -> optional durable journal + replay -> rate limiting + API-key auth.
+
+
+## v1.0.0 release work (2026-10-21)
+- Added: idempotent retries (Idempotency-Key), API-key auth with scopes, per-client rate limits + global ingest concurrency cap, trusted-proxy config, durable write-ahead journal with crash-safe replay, /version, SemVer 1.0.0 (+git sha), CHANGELOG.md, packages.lock.json, Dockerfile, docker-compose, .env.example, ppsettings.Production.json (auth/rate-limit/journal on, JSON logs, fail-closed), docs/OPERATIONS.md rewritten.
+- Verified on real Kestrel in Production profile: fail-closed without keys; 401/403/200; idempotent replay; 429 after limit; hard-kill then restart restores data from journal; JSON logs; /version shows sha; no Server header.
+- **Not verified:** Docker image build (Docker not installed here). Do this first on a machine with Docker / in CI.
+- Process fix: a commit once went out with 20 failing tests (4d8d702 fixed it). Rule 8 in CLAUDE.md now requires green tests before every commit.
 

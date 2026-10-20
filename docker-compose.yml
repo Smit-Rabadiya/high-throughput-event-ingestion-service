@@ -1,0 +1,39 @@
+﻿# Local / single-host deployment. Create .env from .env.example first (never commit .env).
+#   docker compose up --build -d
+services:
+  ingestion:
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    image: event-ingestion:1.0.0
+    ports:
+      - "8080:8080"           # put a TLS-terminating reverse proxy / ingress in front in real deployments
+    environment:
+      # Secrets come from .env (or your secret store). Only the SHA-256 of each key is configured, never the key itself.
+      Auth__Keys__0__Name: gateway
+      Auth__Keys__0__KeySha256: ${INGEST_KEY_SHA256:?set INGEST_KEY_SHA256 in .env}
+      Auth__Keys__0__Scopes__0: ingest
+      Auth__Keys__1__Name: dashboard
+      Auth__Keys__1__KeySha256: ${QUERY_KEY_SHA256:?set QUERY_KEY_SHA256 in .env}
+      Auth__Keys__1__Scopes__0: query
+      # Tunables (defaults shown in docs/OPERATIONS.md)
+      Window__MaxDevices: ${MAX_DEVICES:-100000}
+      RateLimiting__IngestPermitsPerWindow: ${INGEST_RATE_PER_MIN:-600}
+      # Uncomment when running behind a known reverse proxy so client IPs (rate-limit key) are real:
+      # Proxy__Enabled: "true"
+      # Proxy__KnownNetworks__0: 172.16.0.0/12
+    volumes:
+      - journal:/var/lib/ingestion/journal
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    restart: unless-stopped
+    stop_grace_period: 30s    # lets in-flight batches finish and the journal fsync on shutdown
+
+volumes:
+  journal:

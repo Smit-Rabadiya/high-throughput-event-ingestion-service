@@ -8,7 +8,7 @@ High-throughput ingestion tier for an IoT fleet (.NET 10, C#). Accepts batches o
 ## Build, run, test, benchmark
 ```
 dotnet build                                                        # build everything
-dotnet test                                                         # 70+ tests: windowing, parser, API, sweeper, concurrency
+dotnet test                                                         # 100+ tests: windowing, parser, API, sweeper, concurrency
 dotnet run --project src/EventIngestion.Api --launch-profile http   # http://localhost:5084
 dotnet run -c Release --project benchmarks/EventIngestion.Benchmarks -- --filter "*"
 ```
@@ -34,7 +34,8 @@ docs/                     DESIGN.md, BENCHMARK_RESULTS.md, PROJECT_PLAN.md, STAT
 ## Documents
 - [Design document](docs/DESIGN.md): data structures, allocation strategy, concurrency model and correctness argument, windowing tradeoffs, scaling beyond one instance.
 - [Benchmark results](docs/BENCHMARK_RESULTS.md): streaming ingest ~27% faster and ~3.6x less allocation than a naive deserialize-the-list baseline; queries ~39 ns, zero allocation.
-- [Operations guide](docs/OPERATIONS.md): configuration, health/readiness, metrics, production checklist.
+- [Operations guide](docs/OPERATIONS.md): configuration (env vars), Production profile, Docker, probes, metrics, durability, releases, production checklist.
+- [CHANGELOG](CHANGELOG.md): version history (current 1.0.0).
 - [Plan / decisions](docs/PROJECT_PLAN.md), [status log](docs/STATUS.md).
 
 ## Assumptions (where the brief is open)
@@ -50,8 +51,10 @@ docs/                     DESIGN.md, BENCHMARK_RESULTS.md, PROJECT_PLAN.md, STAT
 | Duplicates | No reading id exists, so identical readings are counted separately (a retried batch is counted twice). |
 | deviceId | Case-sensitive, 1-256 chars. Timestamps with offsets are converted to UTC. Property names are exact camelCase; duplicate keys: last wins. |
 | Unknown vs empty device | Both 404, with distinct `title` (`Unknown device` / `No readings in window`). |
-| Restart / outage | State is in memory only (persistence is out of scope). While the service is down it records nothing; on restart it starts empty. Devices that buffer and retry are accepted if timestamps are within the last 5 minutes, older ones are `stale`. Durable buffering is discussed in the design doc. |
+| Restart / outage | Default: state is in memory, a restart starts empty and readings sent while the service is down are not recorded by it (devices retry; use Idempotency-Key). With the optional journal (Journal:Enabled, on in the Production profile) accepted readings are written ahead to disk and the window is rebuilt on start before traffic is accepted. A durable queue in front for outage capture is discussed in DESIGN.md. |
 | Body limit | 32 MiB request cap plus the 50,000-reading cap. |
-| Out of scope | Auth, rate limiting, persistence, containers/CI, UI, horizontal scaling (all as per the brief). |
+| Beyond the brief | The brief lists these as out of scope; they were added afterwards as **optional, off-by-default-in-dev** features at the owner's request: API-key auth, rate limiting, durable journal + replay, idempotent retries, Dockerfile/compose. Still not built: UI, CI pipelines, horizontal scaling (discussed in DESIGN.md). |
+
+
 
 

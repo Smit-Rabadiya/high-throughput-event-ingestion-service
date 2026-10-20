@@ -505,3 +505,5 @@ batch.json
 data/
 journal/
 
+!.env.example
+

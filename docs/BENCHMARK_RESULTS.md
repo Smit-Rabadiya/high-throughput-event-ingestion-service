@@ -30,3 +30,6 @@ Like-for-like (warm vs warm): streaming is **~27% faster and allocates ~3.6x les
 - Fixed clock (`TimeProvider`) so the same payload is always inside the window.
 - Warm-store benchmarks rebuild a store with all device windows pre-created at the start of every iteration (16 invocations per iteration), so each iteration begins from the same state.
 - Not included: HTTP/Kestrel overhead and network time (this isolates the ingestion engine); multi-threaded scaling (covered for correctness in `ConcurrencyTests`, not benchmarked).
+
+## Regression check after the production features (v1.0.0)
+Re-run after adding the optional journal hook, idempotency, auth and rate limiting: allocations unchanged (streaming warm 2.15 MB vs naive 7.73 MB) and streaming/naive time ratio unchanged within noise (0.61x warm, 0.76x cold; absolute times were ~15% higher on that run because the laptop was busy, and the baseline slowed equally). With the journal disabled the only added hot-path cost is one null check per accepted reading.

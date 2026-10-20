@@ -6,5 +6,15 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!-- Versioning: SemVer for the whole solution. Bump here (and in CHANGELOG.md) for every release; tag vX.Y.Z.
+         The build appends +<git sha> automatically (or pass -p:SourceRevisionId=<sha> when building without .git). -->
+    <Version>1.0.0</Version>
+
+    <!-- Reproducible, locked dependency graph: packages.lock.json is committed; CI/Docker restore in locked mode. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>
+

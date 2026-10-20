@@ -48,3 +48,18 @@ public sealed class HardeningTests
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
     }
 }
+
+public class VersionTests
+{
+    [Fact]
+    public async Task Version_endpoint_reports_the_build()
+    {
+        using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var res = await client.GetAsync("/version");
+        Assert.Equal(System.Net.HttpStatusCode.OK, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("1.0.0", body.GetProperty("version").GetString());
+        Assert.StartsWith("1.0.0", body.GetProperty("informationalVersion").GetString(), StringComparison.Ordinal);
+    }
+}

@@ -27,7 +27,11 @@ var rate = Bind<RateLimitOptions>("RateLimiting").Validate();
 var proxy = Bind<ProxyOptions>("Proxy").Validate();
 var journalOptions = Bind<JournalOptions>("Journal").Validate();
 
-builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = service.MaxRequestBodyBytes);
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.AddServerHeader = false; // do not advertise the server stack
+    k.Limits.MaxRequestBodySize = service.MaxRequestBodyBytes;
+});
 
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton(window);
@@ -119,6 +123,7 @@ app.Lifetime.ApplicationStarted.Register(readiness.MarkReady);
 app.Lifetime.ApplicationStopping.Register(readiness.MarkNotReady);
 
 var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
+StartupLog.Starting(startupLog, BuildInfo.Current.InformationalVersion, app.Environment.EnvironmentName);
 if (!auth.Enabled) StartupLog.AuthDisabled(startupLog);
 if (!rate.Enabled) StartupLog.RateLimitDisabled(startupLog);
 
@@ -132,5 +137,6 @@ app.MapReadingEndpoints(auth.Enabled, rate.Enabled);
 app.Run();
 
 public partial class Program;
+
 
 

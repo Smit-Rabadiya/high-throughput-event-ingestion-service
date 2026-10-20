@@ -1,12 +1,15 @@
 ﻿# API Reference and Usage
 
-Base URL (local dev): `http://localhost:5084`. No authentication (out of scope). All bodies are JSON. Errors use RFC 9457 Problem Details (`application/problem+json`).
+Base URL (local dev): `http://localhost:5084`; container: `http://localhost:8080`. All bodies are JSON. Errors use RFC 9457 Problem Details (`application/problem+json`).
 
 ## Run the service
 ```
 dotnet run --project src/EventIngestion.Api --launch-profile http
 ```
 Listens on `http://localhost:5084`. Quick check: `GET /health` returns `{"status":"ok"}`.
+
+## Authentication and limits (when enabled; always in the Production profile)
+Send `X-Api-Key: <key>`. Keys carry scopes: `ingest` (POST) and/or `query` (GETs). **401** missing/invalid key (`WWW-Authenticate: ApiKey`), **403** valid key without the needed scope, **429** rate limit exceeded (`Retry-After` seconds; limits are per key, or per client IP if unauthenticated), **503** with `Retry-After` when the journal or idempotency store cannot take the batch. `/health`, `/health/ready` and `/version` are always anonymous. In local development all of this is off by default.
 
 ## Endpoints
 
@@ -112,5 +115,6 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 
 ### Readiness
 GET /health/ready: 200 once the service is started; 503 during start-up and shutdown.
+
 
 
