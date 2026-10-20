@@ -7,6 +7,7 @@ The version lives in `Directory.Build.props`; release by bumping it, updating th
 ### Fixed
 - Timestamps with no `Z`/offset were read in the server's local time zone (e.g. counted 5.5 h stale on an IST host). They are now UTC, as the brief specifies.
 ### Added
+- Swagger UI (`/swagger`) and OpenAPI 3.0 spec (`/openapi/v1.json`, committed copy `docs/api/openapi.json` guarded by a test): all endpoints, error responses, `Idempotency-Key` header and `X-Api-Key` scheme. Off in the Production profile (`Docs:Enabled`).
 - `Tls:RequireHttps` (refuse non-HTTPS API calls, probes exempt), TLS 1.2/1.3-only HTTPS endpoints, TLS section in OPERATIONS.md.
 
 ## [1.0.0] - 2026-10-21
@@ -18,4 +19,5 @@ The version lives in `Directory.Build.props`; release by bumping it, updating th
 - Optional durable write-ahead journal with crash-safe replay on restart.
 - Dockerfile, docker-compose, Production configuration, locked dependencies.
 - Tests (unit, randomized oracle, parser, API, concurrency, security, journal) and BenchmarkDotNet benchmarks.
+
 

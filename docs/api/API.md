@@ -2,6 +2,14 @@
 
 Base URL (local dev): `http://localhost:5084`; container: `http://localhost:8080`. All bodies are JSON. Errors use RFC 9457 Problem Details (`application/problem+json`).
 
+## Swagger UI / OpenAPI (interactive testing)
+With the service running locally, open **http://localhost:5084/swagger**. Every endpoint is listed with its request body, the Idempotency-Key header and all response codes. Click **Try it out**, then **Execute**.
+- Authentication (only if Auth:Enabled=true): click **Authorize**, paste a key into X-Api-Key.
+- Use a *current* UTC timestamp in the body: readings 5+ minutes old are rejected as stale.
+- The raw spec is at /openapi/v1.json (OpenAPI 3.0) and a committed copy is in [docs/api/openapi.json](openapi.json). **Postman**: Import -> the file or the URL. **Bruno**: Import Collection -> OpenAPI. Also usable for client code generation (NSwag, openapi-generator).
+- Swagger UI and the spec are **on by default for development and off in the Production profile** (they describe your API to anyone who can reach it). Enable with Docs__Enabled=true if you want them in a protected environment.
+- docs/api/openapi.json is kept in sync by a test; after changing endpoints run UPDATE_OPENAPI=1 dotnet test --filter OpenApiTests (PowerShell: $env:UPDATE_OPENAPI="1") and commit the file.
+
 ## Run the service
 ```
 dotnet run --project src/EventIngestion.Api --launch-profile http
@@ -116,6 +124,7 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 
 ### Readiness
 GET /health/ready: 200 once the service is started; 503 during start-up and shutdown.
+
 
 
 

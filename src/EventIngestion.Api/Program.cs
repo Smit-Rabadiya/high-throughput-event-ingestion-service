@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using EventIngestion.Api.Documentation;
 using EventIngestion.Api.Durability;
 using EventIngestion.Api.Endpoints;
 using EventIngestion.Api.Hosting;
@@ -27,6 +28,7 @@ var rate = Bind<RateLimitOptions>("RateLimiting").Validate();
 var proxy = Bind<ProxyOptions>("Proxy").Validate();
 var journalOptions = Bind<JournalOptions>("Journal").Validate();
 var tls = Bind<TlsOptions>("Tls");
+var docs = Bind<DocsOptions>("Docs");
 
 builder.WebHost.ConfigureKestrel(k =>
 {
@@ -56,6 +58,8 @@ if (journalOptions.Enabled)
 builder.Services.AddHostedService(sp => new EvictionSweeper(
     sp.GetRequiredService<DeviceStore>(), sp.GetRequiredService<ILogger<EvictionSweeper>>(), service.SweepInterval,
     sp.GetRequiredService<IdempotencyStore>(), sp.GetService<FileReadingJournal>()));
+
+if (docs.Enabled) builder.Services.AddApiDocs();
 
 if (auth.Enabled)
 {
@@ -151,10 +155,12 @@ if (auth.Enabled) app.UseAuthentication();
 if (rate.Enabled) app.UseRateLimiter(); // after authentication so limits can key on the caller
 if (auth.Enabled) app.UseAuthorization();
 app.MapReadingEndpoints(auth.Enabled, rate.Enabled);
+if (docs.Enabled) app.MapApiDocs();
 
 app.Run();
 
 public partial class Program;
+
 
 
 

@@ -19,6 +19,7 @@ Sources, lowest to highest priority: `appsettings.json` -> `appsettings.{Environ
 | `RateLimiting__IngestPermitsPerWindow` / `QueryPermitsPerWindow` / `Window` | `600` / `6000` / `00:01:00` | Per client (API-key name, else IP) |
 | `RateLimiting__MaxConcurrentIngests` / `ConcurrentIngestQueue` | `64` / `16` | Global cap on batches processed at once; excess queues then gets 429 |
 | `Proxy__Enabled`, `Proxy__KnownProxies__N`, `Proxy__KnownNetworks__N` | off | Trust `X-Forwarded-For/Proto` only from these proxies (otherwise clients can spoof IPs and dodge rate limits) |
+| `Docs__Enabled` | `true` (`false` in Production) | Serves Swagger UI at `/swagger` and the spec at `/openapi/v1.json` |
 | `Tls__RequireHttps` | `false` | Refuse API calls not received over HTTPS (after forwarded headers); probes exempt. Turn on in any deployment where keys are used |
 | `Journal__Enabled` | `false` (`true` in Production) | Write-ahead journal + replay on restart |
 | `Journal__Directory` | `data/journal` (`/var/lib/ingestion/journal` in Production) | Put on a persistent volume |
@@ -72,4 +73,5 @@ With the journal enabled, every accepted reading is written to `journal-*.log` s
 | TLS | Config + enforcement in the service (see TLS section); certificates/rotation come from your platform |
 | WAF, secrets manager, CI/CD pipeline, dashboards/alerts | Deployment platform; not in this repo |
 | Capacity | Single instance, in memory: RAM ~ devices x readings in window x 16-48 B plus headroom. Benchmarks are from a 2015 laptop CPU: re-run on target hardware, and load/soak test before launch. GC mode (Server/Concurrent) not tuned: measure first |
+
 

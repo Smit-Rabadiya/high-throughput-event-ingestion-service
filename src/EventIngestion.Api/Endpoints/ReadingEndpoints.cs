@@ -1,4 +1,5 @@
-﻿using EventIngestion.Api.Durability;
+﻿using EventIngestion.Api.Documentation;
+using EventIngestion.Api.Durability;
 using EventIngestion.Api.Hosting;
 using EventIngestion.Api.Idempotency;
 using EventIngestion.Api.Options;
@@ -22,14 +23,53 @@ public static class ReadingEndpoints
     public static IEndpointRouteBuilder MapReadingEndpoints(this IEndpointRouteBuilder app, bool requireAuth = false, bool rateLimit = false)
     {
         var api = app.MapGroup("/api/v1");
-        var ingest = api.MapPost("/readings", IngestAsync);
-        var byPath = api.MapGet("/devices/{deviceId}/aggregates", GetAggregates);
+
+        var ingest = api.MapPost("/readings", IngestAsync)
+            .WithName("IngestReadings").WithTags("Ingestion")
+            .WithSummary("Ingest a batch of readings (up to 50,000)")
+            .WithDescription("""
+                Body: a JSON array of `{deviceId, timestamp, value}`. The body is streamed and each reading is applied as it is parsed.
+                Always 200 when the batch was processed, even if some readings were rejected: see `rejected`.
+                400/413 mean parsing stopped early; readings before the error **stay applied** and `accepted` says how many.
+                Send `Idempotency-Key` to make retries safe.
+                """)
+            .Accepts<ReadingRequest[]>("application/json")
+            .Produces<IngestResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .WithIdempotencyKeyHeader();
+
+        var byPath = api.MapGet("/devices/{deviceId}/aggregates", GetAggregates)
+            .WithName("GetDeviceAggregates").WithTags("Aggregates")
+            .WithSummary("Rolling aggregates for a device")
+            .WithDescription("Count, min, max and average over readings with timestamp in (now - 5 min, now]. 404 means unknown device or no readings left in the window (see `title`).")
+            .Produces<DeviceAggregatesResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Same query for ids that cannot travel in a URL path segment (e.g. containing "/").
         var byQuery = api.MapGet("/devices/aggregates", (string? deviceId, DeviceStore store) =>
             string.IsNullOrEmpty(deviceId)
                 ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing deviceId",
                     detail: "Provide the deviceId query parameter.")
-                : GetAggregates(deviceId, store));
+                : GetAggregates(deviceId, store))
+            .WithName("GetDeviceAggregatesByQuery").WithTags("Aggregates")
+            .WithSummary("Rolling aggregates for a device (id in query string)")
+            .WithDescription("Identical to the path form; use it for ids containing `/` or other path-hostile characters.")
+            .Produces<DeviceAggregatesResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         if (requireAuth)
         {
@@ -45,10 +85,14 @@ public static class ReadingEndpoints
         }
 
         // Probes stay anonymous and unthrottled so orchestrators always get an answer.
-        app.MapGet("/version", () => Results.Ok(BuildInfo.Current));
-        app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+        app.MapGet("/version", () => Results.Ok(BuildInfo.Current))
+            .WithName("GetVersion").WithTags("Operations").WithSummary("Running version").Produces<BuildInfo>(StatusCodes.Status200OK);
+        app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+            .WithName("GetLiveness").WithTags("Operations").WithSummary("Liveness probe");
         app.MapGet("/health/ready", (ReadinessState state) =>
-            state.IsReady ? Results.Ok(new { status = "ready" }) : Results.Json(new { status = "not ready" }, statusCode: StatusCodes.Status503ServiceUnavailable));
+            state.IsReady ? Results.Ok(new { status = "ready" }) : Results.Json(new { status = "not ready" }, statusCode: StatusCodes.Status503ServiceUnavailable))
+            .WithName("GetReadiness").WithTags("Operations").WithSummary("Readiness probe (503 while starting, recovering the journal, or shutting down)")
+            .Produces(StatusCodes.Status200OK).Produces(StatusCodes.Status503ServiceUnavailable);
         return app;
     }
     public const string IdempotencyKeyHeader = "Idempotency-Key";
@@ -179,6 +223,8 @@ public static class ReadingEndpoints
         }
     }
 }
+
+
 
 
 

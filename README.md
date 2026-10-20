@@ -20,7 +20,7 @@ curl -X POST http://localhost:5084/api/v1/readings -H "Content-Type: application
 curl http://localhost:5084/api/v1/devices/sensor-0042/aggregates
 ```
 (Use current timestamps: readings older than 5 minutes are counted as `stale`.)
-Full reference, status codes, and ready-made **Postman / Bruno / .http** collections: [docs/api/API.md](docs/api/API.md).
+Interactive **Swagger UI** at http://localhost:5084/swagger (dev). Full reference, status codes, OpenAPI spec and ready-made **Postman / Bruno / .http** collections: [docs/api/API.md](docs/api/API.md).
 
 ## Layout
 ```
@@ -54,6 +54,7 @@ docs/                     DESIGN.md, BENCHMARK_RESULTS.md, PROJECT_PLAN.md, STAT
 | Restart / outage | Default: state is in memory, a restart starts empty and readings sent while the service is down are not recorded by it (devices retry; use Idempotency-Key). With the optional journal (Journal:Enabled, on in the Production profile) accepted readings are written ahead to disk and the window is rebuilt on start before traffic is accepted. A durable queue in front for outage capture is discussed in DESIGN.md. |
 | Body limit | 32 MiB request cap plus the 50,000-reading cap. |
 | Beyond the brief | The brief lists these as out of scope; they were added afterwards as **optional, off-by-default-in-dev** features at the owner's request: API-key auth, rate limiting, durable journal + replay, idempotent retries, Dockerfile/compose. Still not built: UI, CI pipelines, horizontal scaling (discussed in DESIGN.md). |
+
 
 
 

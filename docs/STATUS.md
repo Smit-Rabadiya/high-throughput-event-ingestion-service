@@ -78,6 +78,7 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - Line-by-line audit of the PDF: every requirement and deliverable present. Found and fixed one real bug: timestamps without Z/offset were parsed as server-local time (new TimestampParsingTests). Added TLS enforcement (Tls:RequireHttps, TLS 1.2/1.3 only) + docs.
 - Committed and pushed. Consider releasing 1.0.1 (bump Version, move CHANGELOG [Unreleased], tag).
 - Contributor identity: the owner cannot verify the gmail on GitHub, so commits use Smit Rabadiya <76813205+Smit-Rabadiya@users.noreply.github.com> (repo-local git config) and link to the GitHub account. Commits before 8b69d5a still show the gmail address and are not linked to the account (history is not rewritten).
-- Next: Swagger/OpenAPI (dev-only UI, committed openapi.json, X-Api-Key scheme).
+- Done: Swagger/OpenAPI. UI /swagger + spec /openapi/v1.json (dev on, Production off via Docs:Enabled), committed docs/api/openapi.json with drift-guard test, Microsoft.AspNetCore.OpenApi 10.0.13 + Swashbuckle.AspNetCore.SwaggerUI 10.3.1 (pinned). Consider releasing 1.1.0 (UTC fix, TLS, Swagger).
+
 
 
