@@ -3,7 +3,7 @@
 Last updated: 2026-10-20
 
 ## Where we are
-Steps 1-7 of 10 done. Next: step 8, concurrency tests.
+Steps 1-8 of 10 done. Next: step 9, benchmarks.
 Plan: `PROJECT_PLAN.md`. Rules: `../CLAUDE.md`, `REPO_RULES.md`. Requirements PDF is kept locally only (`docs/reference/Practical.pdf`, git-ignored).
 
 ## Remote
@@ -16,7 +16,8 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - [x] Step 5: `ReadingStreamParser` (PipeReader + resumable Utf8JsonReader, pooled id buffer, 50,000 cap, bad readings counted as invalid, unknown/nested fields skipped by depth tracking)
 - [x] Step 6: endpoints (POST /api/v1/readings, GET /api/v1/devices/{id}/aggregates, /health), Problem Details, 16 MiB body cap, integration tests; API docs + Postman / Bruno / .http in docs/api/ (verified live with curl)
 - [x] Step 7: EvictionSweeper BackgroundService (30 s) + tests
-- [x] 66 tests passing (window, parser at all chunk sizes, API integration, sweeper)
+- [x] Step 8: ConcurrencyTests (16 threads one device: exact count/min/max/avg; 8 threads overlapping devices vs sequential oracle; queries during ingest never torn and count monotonic; sweeper same-instant loses nothing; sweeper retiring everything races writers: no failures, no leaked Retired)
+- [x] 71 tests passing (window, parser, API integration, sweeper, concurrency); concurrency tests re-run 3x, stable
 
 ## Parser behaviour decisions (to put in README)
 - Elements failing validation are counted `invalid` and skipped; readings before a syntax error stay applied and are reported with the error.
@@ -36,4 +37,6 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - API reference and client collections: docs/api/API.md, docs/api/postman/, docs/api/bruno/, docs/api/requests.http. Keep them in sync when endpoints change.
 - A / inside a deviceId cannot be addressed via the URL path (documented assumption).
 - Response field is verage (matches the PDF wording).
+
+- Open spec gap: the PDF says nothing about characters in deviceId (only sensor-0042 example). Plan: add GET /api/v1/devices/aggregates?deviceId= alongside the path form so ids containing / are queryable (do in step 10 docs pass).
 
