@@ -99,3 +99,4 @@ $items = 1..50000 | % { '{"deviceId":"d'+($_ % 1000)+'","timestamp":"'+$now+'","
 "[" + ($items -join ",") + "]" | Set-Content batch.json   # then: curl -X POST ... --data-binary "@batch.json"
 ```
 (`batch.json` is git-ignored.)
+

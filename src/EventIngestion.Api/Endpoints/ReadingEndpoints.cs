@@ -18,6 +18,12 @@ public static class ReadingEndpoints
         var api = app.MapGroup("/api/v1");
         api.MapPost("/readings", IngestAsync);
         api.MapGet("/devices/{deviceId}/aggregates", GetAggregates);
+        // Same query for ids that cannot travel in a URL path segment (e.g. containing "/").
+        api.MapGet("/devices/aggregates", (string? deviceId, DeviceStore store) =>
+            string.IsNullOrEmpty(deviceId)
+                ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing deviceId",
+                    detail: "Provide the deviceId query parameter.")
+                : GetAggregates(deviceId, store));
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         return app;
     }
@@ -76,4 +82,5 @@ public static class ReadingEndpoints
         }
     }
 }
+
 

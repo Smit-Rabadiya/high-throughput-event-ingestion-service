@@ -3,7 +3,7 @@
 Last updated: 2026-10-20
 
 ## Where we are
-Steps 1-9 of 10 done. Next: step 10, README + DESIGN.md + final review vs PDF.
+All 10 plan steps done. Remaining: optional polish / review feedback.
 Plan: `PROJECT_PLAN.md`. Rules: `../CLAUDE.md`, `REPO_RULES.md`. Requirements PDF is kept locally only (`docs/reference/Practical.pdf`, git-ignored).
 
 ## Remote
@@ -18,7 +18,8 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - [x] Step 7: EvictionSweeper BackgroundService (30 s) + tests
 - [x] Step 8: ConcurrencyTests (16 threads one device: exact count/min/max/avg; 8 threads overlapping devices vs sequential oracle; queries during ingest never torn and count monotonic; sweeper same-instant loses nothing; sweeper retiring everything races writers: no failures, no leaked Retired)
 - [x] Step 9: BenchmarkDotNet (enchmarks/), results in BENCHMARK_RESULTS.md: streaming vs naive deserialize-list = ~27% faster, ~3.6x less allocation (warm), query ~39 ns / 0 B
-- [x] 71 tests passing (window, parser, API integration, sweeper, concurrency); concurrency tests re-run 3x, stable
+- [x] Step 10: README.md (build/run/test/bench + assumptions), docs/DESIGN.md (all 5 PDF topics), query-string aggregates endpoint for ids with /, API docs/collections synced
+- [x] 72 tests passing (window, parser, API integration, sweeper, concurrency); concurrency tests re-run 3x, stable
 
 ## Parser behaviour decisions (to put in README)
 - Elements failing validation are counted `invalid` and skipped; readings before a syntax error stay applied and are reported with the error.
@@ -46,4 +47,10 @@ https://github.com/Smit-Rabadiya/high-throughput-event-ingestion-service (public
 - **Restart/outage behaviour:** state is in-memory only (PDF section 6 puts persistence/recovery out of scope). Readings sent while the service is down are not recorded by it; after restart it starts empty. Devices that buffer and retry get their readings accepted if timestamps are within the last 5 minutes; older ones are stale. Retried batches can be double-counted (no reading id to dedupe; assumption: duplicates are counted). Scaling/durability answer for DESIGN.md: durable partitioned log (e.g. Kafka) in front, replay on restart.
 - Add query-string form of the aggregates endpoint for ids containing /.
 - DESIGN.md must cover the 5 PDF topics: data structures, allocation minimisation, concurrency model + correctness argument, windowing + tradeoffs, scaling beyond one instance.
+
+
+## Final check against Practical.pdf
+- 3.1 ingest (50k cap, streaming, accepted count): done. 3.2 query + unknown/empty device: done. 3.3 continuous window, aging out, out-of-order: done.
+- 4.1 allocation-conscious + justified (DESIGN s2, benchmark): done. 4.2 per-device locks, tests: done. 4.3 bounded memory (eviction + sweeper), single process: done.
+- 5 deliverables: README, DESIGN.md, BENCHMARK_RESULTS.md + benchmark project, tests: done. 6 out-of-scope items not built. 7 git history + assumptions (README table): done.
 

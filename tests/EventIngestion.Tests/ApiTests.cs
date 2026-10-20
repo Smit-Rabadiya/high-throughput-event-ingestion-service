@@ -115,6 +115,16 @@ public sealed class ApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Device_id_containing_slash_is_queryable_via_query_string()
+    {
+        await _client.PostAsync("/api/v1/readings", Json("""[{ "deviceId": "plant/line-2", "timestamp": "2026-10-08T09:04:01Z", "value": 3 }]"""));
+        var ok = await _client.GetAsync("/api/v1/devices/aggregates?deviceId=" + Uri.EscapeDataString("plant/line-2"));
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.GetAsync("/api/v1/devices/aggregates")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/v1/devices/aggregates?deviceId=nope")).StatusCode);
+    }
+
+    [Fact]
     public async Task Wrong_content_type_is_415()
     {
         var res = await _client.PostAsync("/api/v1/readings", Json(Sample, "text/plain"));
@@ -177,4 +187,5 @@ public sealed class ApiTests : IDisposable
         Assert.Equal(0, store.DeviceCount);
     }
 }
+
 

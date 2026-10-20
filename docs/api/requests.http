@@ -30,3 +30,7 @@ POST {{baseUrl}}/api/v1/readings
 Content-Type: text/plain
 
 []
+
+### Query by query string (ids containing a slash)
+GET {{baseUrl}}/api/v1/devices/aggregates?deviceId=sensor-0042
+

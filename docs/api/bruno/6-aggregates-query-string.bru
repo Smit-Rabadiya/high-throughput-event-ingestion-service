@@ -1,0 +1,16 @@
+﻿meta {
+  name: Get aggregates (query string)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/devices/aggregates?deviceId=sensor-0042
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+

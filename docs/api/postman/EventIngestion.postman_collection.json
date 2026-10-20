@@ -187,6 +187,18 @@
                                        "listen":  "test"
                                    }
                                ]
+                 },
+                 {
+                     "name":  "Get aggregates (query string)",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/v1/devices/aggregates?deviceId=sensor-0042"
+                                             }
+                                 }
                  }
              ]
 }
